@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Papersky — Efficienly SaaS</title>
 <meta name="description" content="Papersky — the only source for SaaS in its most powerful form.">
+<script>
+/* Establish motion-ready styles before first paint, with a fail-safe for script errors. */
+document.documentElement.classList.add('motion-pending');
+window.__paperskyMotionFailsafe=setTimeout(function(){
+  document.documentElement.classList.remove('motion-pending');
+},4000);
+</script>
 <style>
 /* ---------- Embedded fonts (Inter 4, subset, offline) ---------- */
 @font-face{font-family:"Inter";font-weight:400;font-style:normal;font-display:block;src:url(assets/inter-400.woff2) format("woff2")}
@@ -379,7 +386,40 @@ svg{display:block}
 
 /* Focus visibility for keyboard users */
 a:focus-visible{outline:2px solid #c7e36b;outline-offset:3px;border-radius:6px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* First-paint states for the one-time hero entrance. The background never moves. */
+.motion-pending .hero .brand,
+.motion-pending .hero .nav>li,
+.motion-pending .hero .promo,
+.motion-pending .hero .earn,
+.motion-pending .hero .stat,
+.motion-pending .hero .tag,
+.motion-pending .hero .headline .l1,
+.motion-pending .hero .headline .l2{opacity:0}
+.motion-pending .hero .brand,
+.motion-pending .hero .nav>li{transform:translate3d(0,-10px,0)}
+.motion-pending .hero .promo{transform:translate3d(12px,0,0) scale(.985);clip-path:inset(0 0 0 14% round 999px)}
+.motion-pending .hero .tag{transform:translate3d(0,8px,0)}
+.motion-pending .hero .headline .l1,
+.motion-pending .hero .headline .l2{transform:translate3d(0,28px,0);clip-path:inset(0 0 100% 0)}
+.motion-pending .hero .earn{transform:translate3d(0,18px,0) scale(.975);clip-path:inset(7% 0 0 0 round calc(var(--u)*22))}
+.motion-pending .hero .stat{transform:translate3d(0,12px,0)}
+
+@media (max-width:569px){
+  .motion-pending .hero .headline .l1,
+  .motion-pending .hero .headline .l2{transform:translate3d(0,18px,0)}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important}
+  .motion-pending .hero .brand,
+  .motion-pending .hero .nav>li,
+  .motion-pending .hero .promo,
+  .motion-pending .hero .earn,
+  .motion-pending .hero .stat,
+  .motion-pending .hero .tag,
+  .motion-pending .hero .headline .l1,
+  .motion-pending .hero .headline .l2{opacity:1!important;transform:none!important;clip-path:none!important}
+}
 </style>
 </head>
 <body>
@@ -461,6 +501,94 @@ a:focus-visible{outline:2px solid #c7e36b;outline-offset:3px;border-radius:6px}
   </main>
 </div>
 <script>
+/* One coordinated entrance; all animation objects are canceled after the final frame. */
+(function(){
+  if(window.__paperskyEntrancePlayed) return;
+  window.__paperskyEntrancePlayed=true;
+
+  var root=document.documentElement;
+  var reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion||!Element.prototype.animate){
+    clearTimeout(window.__paperskyMotionFailsafe);
+    root.classList.remove('motion-pending');
+    root.classList.add('motion-complete');
+    return;
+  }
+
+  function playEntrance(){
+    var animations=[];
+    var settle='cubic-bezier(.16,1,.3,1)';
+    var reveal='cubic-bezier(.22,1,.36,1)';
+    var compact=window.matchMedia('(max-width: 569px)').matches;
+
+    function play(target,keyframes,options){
+      if(!target) return;
+      var animation=target.animate(keyframes,Object.assign({fill:'both'},options));
+      animations.push(animation);
+    }
+
+    play(document.querySelector('.brand'),[
+      {opacity:0,transform:'translate3d(0,-10px,0)'},
+      {opacity:1,transform:'none'}
+    ],{duration:560,delay:70,easing:settle});
+
+    document.querySelectorAll('.nav>li').forEach(function(item,index){
+      play(item,[
+        {opacity:0,transform:'translate3d(0,-8px,0)'},
+        {opacity:1,transform:'none'}
+      ],{duration:480,delay:150+index*42,easing:settle});
+    });
+
+    play(document.querySelector('.promo'),[
+      {opacity:0,transform:'translate3d(12px,0,0) scale(.985)',clipPath:'inset(0 0 0 14% round 999px)'},
+      {opacity:1,transform:'none',clipPath:'inset(0 0 0 0 round 999px)'}
+    ],{duration:720,delay:220,easing:reveal});
+
+    play(document.querySelector('.tag'),[
+      {opacity:0,transform:'translate3d(0,8px,0)'},
+      {opacity:1,transform:'none'}
+    ],{duration:440,delay:390,easing:settle});
+
+    document.querySelectorAll('.headline .l1,.headline .l2').forEach(function(line,index){
+      var distance=compact?18:28;
+      play(line,[
+        {opacity:0,transform:'translate3d(0,'+distance+'px,0)',clipPath:'inset(0 0 100% 0)'},
+        {opacity:1,offset:.18},
+        {opacity:1,transform:'none',clipPath:'inset(0 0 0% 0)'}
+      ],{duration:index?900:820,delay:470+index*105,easing:reveal});
+    });
+
+    play(document.querySelector('.earn'),[
+      {opacity:0,transform:'translate3d(0,18px,0) scale(.975)',clipPath:'inset(7% 0 0 0 round 22px)'},
+      {opacity:1,transform:'none',clipPath:'inset(0 0 0 0 round 22px)'}
+    ],{duration:900,delay:710,easing:reveal});
+
+    document.querySelectorAll('.stat').forEach(function(stat,index){
+      play(stat,[
+        {opacity:0,transform:'translate3d(0,12px,0)'},
+        {opacity:1,transform:'none'}
+      ],{duration:640,delay:900+index*90,easing:settle});
+    });
+
+    Promise.all(animations.map(function(animation){return animation.finished;})).then(function(){
+      root.classList.remove('motion-pending');
+      root.classList.add('motion-complete');
+      animations.forEach(function(animation){animation.cancel();});
+      clearTimeout(window.__paperskyMotionFailsafe);
+    }).catch(function(){
+      root.classList.remove('motion-pending');
+      animations.forEach(function(animation){animation.cancel();});
+      clearTimeout(window.__paperskyMotionFailsafe);
+    });
+  }
+
+  var fontsReady=document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve();
+  Promise.race([
+    fontsReady,
+    new Promise(function(resolve){setTimeout(resolve,1200);})
+  ]).then(function(){requestAnimationFrame(function(){requestAnimationFrame(playEntrance);});});
+})();
+
 /* Phone navigation: burger toggles the glass panel (CSS decides when it exists) */
 (function(){
   var hero=document.querySelector('.hero'),btn=hero&&hero.querySelector('.menu-toggle'),nav=document.getElementById('primaryNav');
